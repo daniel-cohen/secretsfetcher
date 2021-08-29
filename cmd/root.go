@@ -60,6 +60,11 @@ func initConfig() {
 	// Note: only fields which are read from the config will be loaded from ENV: https://github.com/spf13/viper/issues/584
 	// We can use viper.SetDefault("") https://github.com/spf13/viper#unmarshaling
 	viper.SetDefault("LogLevel", "warn")
+	viper.SetDefault("Aws", &AWSConfig{
+		PrefixFilter:    "",
+		Region:          "",
+		PathTranslation: "_",
+	})
 
 	viper.AutomaticEnv()
 

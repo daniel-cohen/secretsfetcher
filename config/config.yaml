@@ -1,1 +1,9 @@
 LogLevel: info
+
+Aws:
+  prefixFilter: "mysecretprefix/"
+  tagFilter:
+      app: "my-sample-app"
+      secret-type: "my-sample-type"
+  Region: ""
+  PathTranslation: "_"

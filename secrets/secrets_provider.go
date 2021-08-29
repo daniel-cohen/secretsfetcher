@@ -11,10 +11,10 @@ type Secret struct {
 
 //TODO:
 // One implementation can a local file.
-type SecretsProvider interface {
-	FetchSecrets() ([]*Secret, error)
-}
+// type SecretsProvider interface {
+// 	FetchSecrets() ([]*Secret, error)
+// }
 
-type SecretProviderConfig interface {
-	//Get()
-}
+// type SecretProviderConfig interface {
+// 	//Get()
+// }
