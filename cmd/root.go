@@ -25,6 +25,13 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
+		}
+		return nil
+	},
 }
 
 // This is called by main.main(). It only needs to happen once to the rootCmd.
