@@ -70,10 +70,11 @@ jobs:
         run: |
           VERSION="v$(date -u "+%y%m%d-%H%M%S")-${GITHUB_SHA::7}"
           IMAGE_NAME="danielco/$SERVICE:$VERSION"
+          IMAGE_NAME_LATEST="danielco/$SERVICE:latest"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
           # build the normal image
-          docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME .
+          docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME -t $IMAGE_NAME_LATEST .
           docker push $IMAGE_NAME
       - name: Tag Release
         run: |
