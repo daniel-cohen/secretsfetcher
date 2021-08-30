@@ -49,6 +49,10 @@ func init() {
 
 	pf := rootCmd.PersistentFlags()
 	pf.StringVar(&cfgFile, "config", "config.yaml", "config file (default is ./config.yaml)")
+	//pf.StringVar(&cfgFile.loglevel, "loglevel", "info", "log level (default is info)")
+
+	pf.String("loglevel", "info", "log level (default is info)")
+
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -59,12 +63,29 @@ func initConfig() {
 
 	// Note: only fields which are read from the config will be loaded from ENV: https://github.com/spf13/viper/issues/584
 	// We can use viper.SetDefault("") https://github.com/spf13/viper#unmarshaling
-	viper.SetDefault("LogLevel", "warn")
-	viper.SetDefault("Aws", &AWSConfig{
-		PrefixFilter:    "",
-		Region:          "",
-		PathTranslation: "_",
-	})
+
+	//viper.SetDefault("LogLevel", "warn")
+	// Bind the cli flag so we can override it in ENV/Config:
+	viper.BindPFlag("loglevel", rootCmd.Flags().Lookup("loglevel"))
+
+	///-----------------------------------------------------------------
+	//viper.BindPFlag("loglevel", awsCmd.Flags().Lookup("tags"))
+	//TODO: See if I can refactor this into the aws.go command:
+	if awsCmd.Flags().Lookup("tags") != nil {
+		viper.BindPFlag("Aws.TagFilter", awsCmd.Flags().Lookup("tags"))
+	}
+
+	if awsCmd.Flags().Lookup("prefix") != nil {
+		viper.BindPFlag("Aws.PrefixFilter", awsCmd.Flags().Lookup("prefix"))
+	}
+
+	///-----------------------------------------------------------------
+
+	// Set specific (even if empty) defaults so we can load them from ENV even if the config is not loaded:
+	viper.SetDefault("Aws.PrefixFilter", "")
+	viper.SetDefault("Aws.PathTranslation", defaultPathTranslation)
+	viper.SetDefault("Aws.Region", "")
+	viper.SetDefault("Aws.TagFilter", map[string]string{})
 
 	viper.AutomaticEnv()
 

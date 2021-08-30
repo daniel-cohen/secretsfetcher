@@ -22,6 +22,8 @@ const (
 var (
 	manifestFile string
 	outputFolder string
+	//tagFilters   map[string]string
+	//secretPrefix string
 )
 
 // func initConfig() {
@@ -142,6 +144,10 @@ var awsCmd = &cobra.Command{
 func init() {
 	awsCmd.Flags().StringVarP(&manifestFile, "manifest", "m", "", "secrets manifest file")
 	awsCmd.Flags().StringVarP(&outputFolder, "output", "o", "", "output folder")
+
+	awsCmd.Flags().StringToString("tags", map[string]string{}, "a map (key, value) of filters to find secerts by. Example: --tags=\"app=comma,value\",secret-type=no-comma,tagKey=tagValue")
+
+	awsCmd.Flags().String("prefix", "", "a prefix for all secrets to fetch")
 
 	// it's no longer required (we can do a wild card search)
 	//awsCmd.MarkFlagRequired("manifest")

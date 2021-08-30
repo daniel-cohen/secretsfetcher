@@ -152,7 +152,7 @@ func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tag
 		return nil, err
 	}
 
-	p.zl.Debug("listed secrets", zap.Int("secretcount", len(secretObject)))
+	p.zl.Debug("listed secrets", zap.Int("secretCount", len(secretObject)))
 
 	return p.FetchSecrets(secretObject)
 
