@@ -167,12 +167,12 @@ func initLog(logLevel string) *zap.Logger {
 		OutputPaths:      []string{"stdout"},
 		ErrorOutputPaths: []string{"stdout"},
 		EncoderConfig: zapcore.EncoderConfig{
-			MessageKey: "msg",
+			MessageKey: "message",
 
-			LevelKey:    "lvl",
+			LevelKey:    "severity",
 			EncodeLevel: zapcore.CapitalLevelEncoder,
 
-			TimeKey:    "ts",
+			TimeKey:    "time",
 			EncodeTime: zapcore.RFC3339NanoTimeEncoder,
 
 			CallerKey:      "src",
