@@ -26,18 +26,12 @@ type AWSSecretsManagerProvider struct {
 	//cfg       *SecretProviderClass
 }
 
-//func NewAWSSecretsManagerProvider(cfg *SecretProviderClass, zl *zap.Logger) (*AWSSecretsManagerProvider, error) {
 func NewAWSSecretsManagerProvider(region string, zl *zap.Logger) (*AWSSecretsManagerProvider, error) {
 	//Create a Secrets Manager client
 	var (
 		awsCfg aws.Config
 		err    error
 	)
-
-	//TODO:
-	// if cfg.Provider != "aws" {
-	// 	return nil, fmt.Errorf("provider %s is not allowed. must be aws", cfg.Provider)
-	// }
 
 	var aswOptions []func(*config.LoadOptions) error
 

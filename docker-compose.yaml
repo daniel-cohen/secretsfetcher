@@ -1,9 +1,16 @@
 version: "3.7"
-# use service_completed_successfully
-# as a way to simluate init containers.
+# This is a testing docker-compose as used as a dev playground to simulate kubernetes init containers.
+# it  makes use of the "service_completed_successfully" dependency condition.
 # Refs:
 # 1. https://github.com/compose-spec/compose-spec/blob/master/spec.md#long-syntax-1
 # 2. https://github.com/docker/compose-cli/pull/1502
+# I am simluating a kubernetes emptyDir using a shared tmpfs volume. This is not officially supported at the moment.
+# I have managed to hack it to work by mounting the tmpfs volume on the "bootstrap-temp" service first and only then writing and reading for it from the other two service.
+# Without it, the tmpfs gets wiped when the "bootstrap" service exits.
+# The documentions (https://docs.docker.com/storage/tmpfs/) currently says:
+# > Unlike volumes and bind mounts, you can’t share tmpfs mounts between containers.
+#
+# Edit sample_secrets_manifest.yaml or provider your own manifest listing your own secrets
 services:
   bootstrap:
     build:
@@ -13,59 +20,38 @@ services:
     environment:
       - AWS_REGION=us-east-1
       - AWS_PROFILE=dev
+      - APP_LOGLEVEL=debug
     volumes:
       - secrets-volume:/secretsfetcher/secrets
-      #TODO: just for dev:
-      #- ~/.aws/:/root/.aws
       - ~/.aws/:/home/appuser/.aws
       - ./example/manifest/sample_secrets_manifest.yaml:/home/appuser/secrets_manifest.yaml
-    #entrypoint:  ls -als /secretsfetcher
-    #entrypoint: mkdir -p /secretsfetcher/secrets/api-verifier-users/normal
-    #entrypoint: env
-    #entrypoint:  groups appuser
-    #entrypoint: touch /secretsfetcher/secrets/1.txt
-    #command: sh -c 'echo "sleeping for 10 sec" && sleep 10 && echo "JKAJD*(AS&*( secret content" > "/secretsfetcher/secrets/secret1" && exit 0'
+    depends_on:
+      bootstrap-temp:
+        condition: service_started
     command: "aws -m=/home/appuser/secrets_manifest.yaml -o=/secretsfetcher/secrets"
 
 
+  # Sample service to consume the secrets off the tmpfs volume
   sample-svc:
-    #image: busybox
     image: alpine:3.14.0
     volumes:
       - secrets-volume:/secretsfetcher/secrets:ro
-    # volumes_from:
-    #   - bootstrap:ro
-    #env_file: .env
     depends_on:
       bootstrap:
         condition: service_completed_successfully
-    #command: sh -c 'sleep 10 && echo "----------------------------------------------"  && find "/secretsfetcher/secrets/" && echo "----------------------------------------------"'
-    #command: sh -c 'echo "----------------------------------------------"  && find "/secretsfetcher/secrets/"  -type f -exec cat {} >> all_secrets.txt \; && echo "----------------------------------------------"'
-    # equivalent to: find . -type f | xargs -I'{}' jq -s '.' "{}" | jq '. | { users: .}'
-    command: sh -c "apk update && apk add jq &&  find /secretsfetcher/secrets/ -type f | xargs -I'{}' jq -s '.' \"{}\" | jq '. | { users":" .}'"
+      bootstrap-temp:
+        condition: service_started
+
+    command: sh -c "echo "SAMPLE SERVICE" && apk update && apk add jq &&  find /secretsfetcher/secrets/ -type f | xargs -I'{}' jq -s '.' \"{}\" | jq '. | { secrets":" .}'"
     
 
-
-    # will mount multiple. See kubernetes secrt values: https://kubernetes.io/docs/concepts/configuration/secret/#consuming-secret-values-from-volumes
-
+  # just a hack service to 
   bootstrap-temp:
     image: busybox
-    # depends_on:
-    #   bootstrap:
-    #     condition: service_completed_successfully    
     volumes:
     - secrets-volume:/secretsfetcher/secrets
     command: sh -c 'echo "sleeping for 10 sec" && sleep 10 && echo "JKAJD*(AS&*( secret content" > "/secretsfetcher/secrets/secret1" && exit 0'
-    #command: sh -c 'exit 1'
-    #command: sh -c 'echo "JKAJD*(AS&*( secret content" > "/secretsfetcher/secrets/secret1" && exit 0'
-#   aws:
-#     image: amazon/aws-cli
-#     environment:
-# #      - AWS_REGION=us-east-1
-#       - AWS_PROFILE=dev    
-#     volumes:
-#       - ~/.aws/:/root/.aws
-#     command: s3 ls
+
 
 # top level tmpfs shared volumes: https://github.com/docker/compose/issues/5682
 # this should work https://stackoverflow.com/questions/44284484/docker-compose-share-named-volume-between-multiple-containers
