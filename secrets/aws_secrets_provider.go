@@ -8,9 +8,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/smithy-go"
-
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/smithy-go"
+	"github.com/daniel-cohen/secretsfetcher/logging"
+
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"go.uber.org/zap"
 )
@@ -19,11 +20,22 @@ const (
 	defaultMaxResults = 50
 )
 
+type secretsManagerAPI interface {
+	ListSecrets(ctx context.Context, params *secretsmanager.ListSecretsInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.ListSecretsOutput, error)
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
+}
+
 type AWSSecretsManagerProvider struct {
-	// implements SecretsProvider
 	zl        *zap.Logger
-	awsClient *secretsmanager.Client
-	//cfg       *SecretProviderClass
+	awsClient secretsManagerAPI
+}
+
+func NewAWSSecretsManagerProviderFromClient(awsClient secretsManagerAPI, zl *zap.Logger) *AWSSecretsManagerProvider {
+	//Create a Secrets Manager client
+	return &AWSSecretsManagerProvider{
+		awsClient: awsClient,
+		zl:        zl.With(zap.String("secretsProvider", "aws_secrets_manger")),
+	}
 }
 
 func NewAWSSecretsManagerProvider(region string, zl *zap.Logger) (*AWSSecretsManagerProvider, error) {
@@ -33,7 +45,8 @@ func NewAWSSecretsManagerProvider(region string, zl *zap.Logger) (*AWSSecretsMan
 		err    error
 	)
 
-	var aswOptions []func(*config.LoadOptions) error
+	awsLogger := logging.NewAwsLogger(zl)
+	aswOptions := []func(*config.LoadOptions) error{config.WithLogger(awsLogger)}
 
 	// Enable aws debug logging:
 	if zl.Core().Enabled(zap.DebugLevel) {
@@ -45,18 +58,13 @@ func NewAWSSecretsManagerProvider(region string, zl *zap.Logger) (*AWSSecretsMan
 	}
 
 	awsCfg, err = config.LoadDefaultConfig(context.Background(), aswOptions...)
-
 	if err != nil {
 		return nil, err
 	}
 
 	svc := secretsmanager.NewFromConfig(awsCfg)
 
-	return &AWSSecretsManagerProvider{
-		awsClient: svc,
-		//cfg:       cfg,
-		zl: zl.With(zap.String("secretsProvider", "aws_secrets_manger")),
-	}, nil
+	return NewAWSSecretsManagerProviderFromClient(svc, zl), nil
 }
 
 func (p *AWSSecretsManagerProvider) getSecretValue(secretObj *SecretObject) (*Secret, error) {
@@ -141,14 +149,14 @@ func (p *AWSSecretsManagerProvider) FetchSecrets(secretObjs []*SecretObject) ([]
 }
 
 func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*Secret, error) {
-	secretObject, err := p.listSecrets(secretNamePrefix, tagFilters)
+	secretObjects, err := p.listSecrets(secretNamePrefix, tagFilters)
 	if err != nil {
 		return nil, err
 	}
 
-	p.zl.Debug("listed secrets", zap.Int("secretCount", len(secretObject)))
+	p.zl.Debug("listed secrets", zap.Int("secretCount", len(secretObjects)))
 
-	return p.FetchSecrets(secretObject)
+	return p.FetchSecrets(secretObjects)
 
 }
 

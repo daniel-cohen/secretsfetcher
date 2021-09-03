@@ -147,7 +147,7 @@ region: ap-southeast-2
 pathTranslation: "$"
 ```
 
-For comparison this is a equivalent aws SecretProviderClass :
+For comparison, this is a equivalent aws SecretProviderClass :
 
 ```yaml
 apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
