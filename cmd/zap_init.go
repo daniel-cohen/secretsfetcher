@@ -7,13 +7,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func initLog(logLevel string) *zap.Logger {
+func initLog(logLevel string, console bool) *zap.Logger {
 	level := zapcore.InfoLevel
 	if err := level.Set(logLevel); err != nil {
 		log.Fatalf("could not set zap log level to: \"%s\" \n", logLevel)
 	}
 
 	config := &zap.Config{
+
 		Encoding:         "json",
 		Level:            zap.NewAtomicLevelAt(level),
 		OutputPaths:      []string{"stdout"},
@@ -33,6 +34,11 @@ func initLog(logLevel string) *zap.Logger {
 
 			StacktraceKey: "stk",
 		},
+	}
+
+	if console {
+		config.Encoding = "console"
+		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
 
 	zl, err := config.Build()

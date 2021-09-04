@@ -28,7 +28,8 @@ services:
     depends_on:
       bootstrap-temp:
         condition: service_started
-    command: "aws -m=/home/appuser/secrets_manifest.yaml -o=/secretsfetcher/secrets"
+    command: "aws -m=/home/appuser/secrets_manifest.yaml -o=/secretsfetcher/secrets --consolelog"
+    #command: "aws --tags=app=api-verifier,secret-type=api-verifier-user --prefix=api-verifier-users/ -o=/secretsfetcher/secrets --consolelog"
 
 
   # Sample service to consume the secrets off the tmpfs volume
@@ -42,7 +43,9 @@ services:
       bootstrap-temp:
         condition: service_started
 
-    command: sh -c "echo "SAMPLE SERVICE" && apk update && apk add jq &&  find /secretsfetcher/secrets/ -type f | xargs -I'{}' jq -s '.' \"{}\" | jq '. | { secrets":" .}'"
+    #command: sh -c "echo "SAMPLE SERVICE" && ls -als /secretsfetcher/secrets/ && apk update && apk add jq &&  find /secretsfetcher/secrets/ -type f | xargs -I'{}' jq -s '.' \"{}\" | jq '. | { secrets":" .}'"
+    #command: ls -als /secretsfetcher/secrets/
+    command: sh -c "ls -als /secretsfetcher/secrets/ &&  apk update && apk add jq  && find /secretsfetcher/secrets/ -type f | xargs -I'{}' jq -s '.' \"{}\" | jq '. | { secrets":" .}'"
     
 
   # just a hack service to 
@@ -50,7 +53,7 @@ services:
     image: busybox
     volumes:
     - secrets-volume:/secretsfetcher/secrets
-    command: sh -c 'echo "sleeping for 10 sec" && sleep 10 && echo "JKAJD*(AS&*( secret content" > "/secretsfetcher/secrets/secret1" && exit 0'
+    command: sh -c 'echo "sleeping for 20 sec" && sleep 20 && echo "JKAJD*(AS&*( secret content" > "/secretsfetcher/secrets/secret1" && exit 0'
 
 
 # top level tmpfs shared volumes: https://github.com/docker/compose/issues/5682

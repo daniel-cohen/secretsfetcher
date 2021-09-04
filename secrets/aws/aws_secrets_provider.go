@@ -1,4 +1,4 @@
-package secrets
+package aws
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/smithy-go"
 	"github.com/daniel-cohen/secretsfetcher/logging"
+	"github.com/daniel-cohen/secretsfetcher/secrets"
 
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"go.uber.org/zap"
@@ -28,13 +29,15 @@ type secretsManagerAPI interface {
 type AWSSecretsManagerProvider struct {
 	zl        *zap.Logger
 	awsClient secretsManagerAPI
+	region    string
 }
 
-func NewAWSSecretsManagerProviderFromClient(awsClient secretsManagerAPI, zl *zap.Logger) *AWSSecretsManagerProvider {
+func newAWSSecretsManagerProviderFromClient(awsClient secretsManagerAPI, region string, zl *zap.Logger) *AWSSecretsManagerProvider {
 	//Create a Secrets Manager client
 	return &AWSSecretsManagerProvider{
 		awsClient: awsClient,
 		zl:        zl.With(zap.String("secretsProvider", "aws_secrets_manger")),
+		region:    region,
 	}
 }
 
@@ -64,10 +67,14 @@ func NewAWSSecretsManagerProvider(region string, zl *zap.Logger) (*AWSSecretsMan
 
 	svc := secretsmanager.NewFromConfig(awsCfg)
 
-	return NewAWSSecretsManagerProviderFromClient(svc, zl), nil
+	return newAWSSecretsManagerProviderFromClient(svc, region, zl), nil
 }
 
-func (p *AWSSecretsManagerProvider) getSecretValue(secretObj *SecretObject) (*Secret, error) {
+func (p *AWSSecretsManagerProvider) Region() string {
+	return p.region
+}
+
+func (p *AWSSecretsManagerProvider) getSecretValue(secretObj *AwsSecretObject) (*secrets.Secret, error) {
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretObj.ObjectName), // this can be the name or full ARN
 	}
@@ -127,14 +134,14 @@ func (p *AWSSecretsManagerProvider) getSecretValue(secretObj *SecretObject) (*Se
 		)
 	}
 
-	return &Secret{
+	return &secrets.Secret{
 		Name:    *result.Name,
 		Content: secretString,
 	}, nil
 }
 
-func (p *AWSSecretsManagerProvider) FetchSecrets(secretObjs []*SecretObject) ([]*Secret, error) {
-	var res []*Secret
+func (p *AWSSecretsManagerProvider) FetchSecrets(secretObjs []*AwsSecretObject) ([]*secrets.Secret, error) {
+	var res []*secrets.Secret
 	// Get the values one by one:
 	for _, secretObj := range secretObjs {
 		if secret, err := p.getSecretValue(secretObj); err != nil {
@@ -148,7 +155,7 @@ func (p *AWSSecretsManagerProvider) FetchSecrets(secretObjs []*SecretObject) ([]
 	return res, nil
 }
 
-func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*Secret, error) {
+func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*secrets.Secret, error) {
 	secretObjects, err := p.listSecrets(secretNamePrefix, tagFilters)
 	if err != nil {
 		return nil, err
@@ -160,10 +167,10 @@ func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tag
 
 }
 
-// We will fetch a list of ARNS and construct SecretObject with the latest versions:
+// We will fetch a list of ARNS and construct AwsSecretObject with the latest versions:
 // We can set a range of tag filters . E.g. app=api-verifier
 // SecretNamePrefix - is mandatory. E.:g secretNamePrefix= api-verifier/
-func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*SecretObject, error) {
+func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*AwsSecretObject, error) {
 	if strings.TrimSpace(secretNamePrefix) == "" {
 		return nil, fmt.Errorf("secretNamePrefix cannot be empty")
 	}
@@ -171,7 +178,7 @@ func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilt
 	//var secretARNs []string
 	var nextToken *string
 
-	var secretObjects []*SecretObject
+	var secretObjects []*AwsSecretObject
 
 	filters := []types.Filter{{Key: types.FilterNameStringTypeName, Values: []string{secretNamePrefix}}}
 
@@ -206,7 +213,7 @@ func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilt
 				return nil, fmt.Errorf("recieved empty ARN")
 			}
 
-			secretObjects = append(secretObjects, &SecretObject{
+			secretObjects = append(secretObjects, &AwsSecretObject{
 				ObjectName: *secret.ARN,
 			})
 		}

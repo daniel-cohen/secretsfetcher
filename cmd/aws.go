@@ -1,131 +1,99 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
-	"path"
-	"strings"
 
 	"github.com/daniel-cohen/secretsfetcher/secrets"
+	"github.com/daniel-cohen/secretsfetcher/secrets/aws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-const (
-	defaultPathTranslation = "_"
-	pathTranslationFalse   = "False"
-)
-
-var (
-	manifestFile string
-	outputFolder string
-)
-
-// versionCmd represents the version command
 var awsCmd = &cobra.Command{
 	Use:   "aws",
-	Short: "Shows the secretsfetcher service version",
+	Short: "fetched secretes from aws secrets manager",
 	Run: func(cmd *cobra.Command, args []string) {
-		v := viper.New()
 
-		//zlCfg := zap.NewDevelopmentConfig()
-		//zlCfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-		zl := initLog(cfg.LogLevel)
+		// Init logging:
+		zl := initLog(cfg.LogLevel, consoleLogging)
 		defer zl.Sync() // flushes buffer, if any
 
-		region := ""
-		pathTranslationChar := defaultPathTranslation
-		var secretRes []*secrets.Secret
+		outputFolder, err := cmd.Flags().GetString("output")
+		if err != nil {
+			zl.Fatal("failed to get the output flag")
+		}
 
+		manifestFile, err := cmd.Flags().GetString("manifest")
+		if err != nil {
+			zl.Fatal("failed to get the manifest flag")
+		}
+
+		region := cfg.Aws.Region // we set it to default to empty string
+		pathTranslationChar := aws.DefaultPathTranslation
+		//var secretRes []*secrets.Secret
+
+		var sf secrets.SecretsFetcher
+
+		var manifestCfg *aws.SecretManifest
 		// We're loading the manifest as  a viper config file:
 		if manifestFile != "" {
+			// viper instance for the manifest
+			v := viper.New()
+
 			// Use config file from the flag.
 			v.SetConfigFile(manifestFile)
 
 			// If a config file is found, read it in.
-			if err := v.ReadInConfig(); err == nil {
-				zl.Info("Read manifest file", zap.String("manifestPath", manifestFile))
-			} else {
-				zl.Error("Failed to load manifest file", zap.Error(err))
+			if err := v.ReadInConfig(); err != nil {
+				zl.Fatal("Failed to load manifest file", zap.String("manifestPath", manifestFile), zap.Error(err))
+
 			}
+			zl.Info("Read manifest file", zap.String("manifestPath", manifestFile))
 
 			//Put all the config in a common struct
-			manifestCfg := &secrets.SecretProviderClass{}
+			manifestCfg = &aws.SecretManifest{}
 			if err := v.Unmarshal(&manifestCfg); err != nil {
 				zl.Fatal("Unable to decode into struct", zap.Error(err))
-
 			}
 
 			zl.Info("Loaded manifest config", zap.Any("manifestCfg", manifestCfg))
 
-			region = manifestCfg.Region
-			pathTranslationChar = manifestCfg.PathTranslation
-
-			//TODO: refactor:
-			provider, err := secrets.NewAWSSecretsManagerProvider(region, zl)
-			if err != nil {
-				zl.Fatal("failed to setup aws secrets provider", zap.Error(err))
+			// the manifest will take precedence over the region in the main config
+			if manifestCfg.Region != "" {
+				region = manifestCfg.Region
 			}
 
-			secretRes, err = provider.FetchSecrets(manifestCfg.SecretObjects)
-			if err != nil {
-				zl.Fatal("failed to fetch secrets from aws secrets provider",
-					zap.Any("secretObjects", manifestCfg.SecretObjects),
-					zap.Error(err))
+			if manifestCfg.PathTranslation != "" {
+				pathTranslationChar = manifestCfg.PathTranslation
 			}
-
 		} else {
 			zl.Info("no manifest set")
 			if cfg.Aws == nil || cfg.Aws.PrefixFilter == "" {
 				zl.Fatal("no manifest and aws prefix filter not set")
 			}
-
-			region = cfg.Aws.Region
-			pathTranslationChar = cfg.Aws.PathTranslation
-
-			//TODO: refactor:
-			provider, err := secrets.NewAWSSecretsManagerProvider(region, zl)
-			if err != nil {
-				zl.Fatal("failed to setup aws secrets provider", zap.Error(err))
-			}
-
-			secretRes, err = provider.FetchAllSecrets(cfg.Aws.PrefixFilter, cfg.Aws.TagFilter)
-
-			if err != nil {
-				zl.Fatal("failed to fetch all secrets from aws secrets provider",
-					zap.String("prefixFilter", cfg.Aws.PrefixFilter),
-					zap.Any("tagFilter", cfg.Aws.TagFilter),
-					zap.Error(err))
-			}
 		}
 
-		for _, v := range secretRes {
-			zl.Debug("secret fetched", zap.String("secretName", v.Name))
+		provider, err := aws.NewAWSSecretsManagerProvider(region, zl)
+		if err != nil {
+			zl.Fatal("failed to setup aws secrets provider", zap.Error(err))
+		}
 
-			outputFileName := v.Name
-			if pathTranslationChar != "" {
-				if pathTranslationChar != pathTranslationFalse {
-					outputFileName = strings.ReplaceAll(outputFileName, "/", pathTranslationChar)
-				}
-			} else {
-				outputFileName = strings.ReplaceAll(outputFileName, "/", defaultPathTranslation)
+		if manifestCfg != nil {
+			sf = aws.NewManifestSecretFetcher(provider, manifestCfg, zl)
+		} else {
+			sf = aws.NewListSecretFetcher(provider, cfg.Aws.PrefixFilter, cfg.Aws.TagFilter, zl)
+		}
 
-			}
+		secretRes, err := sf.Fetch()
+		if err != nil {
+			zl.Fatal("failed to fetch secrets", zap.Error(err))
+		}
 
-			outputFilePath := path.Join(outputFolder, outputFileName)
-
-			zl.Debug("writing secret to file",
-				zap.String("file_path", outputFilePath),
-				zap.String("secret_name", v.Name),
-				//zap.String("secret_name", v.Content),
-			)
-			if err := ioutil.WriteFile(outputFilePath, []byte(v.Content), os.ModePerm); err != nil {
-				zl.Error("failed to write file", zap.String("file_path", outputFilePath), zap.Error(err))
-				// Skip it and move on
-				continue
-			}
-
+		sw := secrets.NewFileSecretWriter(outputFolder, pathTranslationChar, zl).StopOnError()
+		err = sw.WriteSecrets(secretRes)
+		if err != nil {
+			zl.Fatal("failed to write secrets", zap.Error(err))
 		}
 
 		os.Exit(0)
@@ -133,15 +101,12 @@ var awsCmd = &cobra.Command{
 }
 
 func init() {
-	awsCmd.Flags().StringVarP(&manifestFile, "manifest", "m", "", "secrets manifest file")
-	awsCmd.Flags().StringVarP(&outputFolder, "output", "o", "", "output folder")
-
+	awsCmd.Flags().StringP("manifest", "m", "", "secrets manifest file")
+	//awsCmd.Flags().StringVarP(&manifestFile, "manifest", "m", "", "secrets manifest file")
+	//awsCmd.Flags().StringVarP(&outputFolder, "output", "o", "", "output folder. Will default to the current working folder")
+	awsCmd.Flags().StringP("output", "o", "", "output folder. Will default to the current working folder")
 	awsCmd.Flags().StringToString("tags", map[string]string{}, "a map (key, value) of filters to find secerts by. Example: --tags=\"app=comma,value\",secret-type=no-comma,tagKey=tagValue")
-
 	awsCmd.Flags().String("prefix", "", "a prefix for all secrets to fetch")
-
-	// it's no longer required (we can do a wild card search)
-	//awsCmd.MarkFlagRequired("manifest")
 
 	rootCmd.AddCommand(awsCmd)
 }

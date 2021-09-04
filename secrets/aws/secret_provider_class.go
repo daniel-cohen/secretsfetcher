@@ -1,9 +1,14 @@
-package secrets
+package aws
+
+const (
+	DefaultPathTranslation = "_"
+	PathTranslationFalse   = "False"
+)
 
 // Our manifest strucutre:
-type SecretProviderClass struct {
+type SecretManifest struct {
 	Provider      string
-	SecretObjects []*SecretObject
+	SecretObjects []*AwsSecretObject
 	Region        string
 
 	//An optional field to specify a substitution character to use when the path separator character (slash on Linux) is used in the file name.

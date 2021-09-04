@@ -32,4 +32,4 @@ jobs:
         run: go vet ./...
 
       - name: golang  unit test
-        run: go test ./... -cover -race
+        run: go test -v ./... -cover -race

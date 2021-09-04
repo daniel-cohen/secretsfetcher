@@ -5,15 +5,17 @@ import (
 	"os"
 	"strings"
 
+	"github.com/daniel-cohen/secretsfetcher/secrets/aws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // Version defines the build version of the service, injected during build.
 var (
-	version string
-	cfgFile string
-	cfg     config
+	version        string
+	cfgFile        string
+	cfg            config
+	consoleLogging bool
 )
 
 //
@@ -52,6 +54,7 @@ func init() {
 	//pf.StringVar(&cfgFile.loglevel, "loglevel", "info", "log level (default is info)")
 
 	pf.String("loglevel", "info", "log level (default is info)")
+	pf.BoolVar(&consoleLogging, "consolelog", false, "console logger for debugging instead of the json formatted logging")
 
 }
 
@@ -83,7 +86,7 @@ func initConfig() {
 
 	// Set specific (even if empty) defaults so we can load them from ENV even if the config is not loaded:
 	viper.SetDefault("Aws.PrefixFilter", "")
-	viper.SetDefault("Aws.PathTranslation", defaultPathTranslation)
+	viper.SetDefault("Aws.PathTranslation", aws.DefaultPathTranslation)
 	viper.SetDefault("Aws.Region", "")
 	viper.SetDefault("Aws.TagFilter", map[string]string{})
 
