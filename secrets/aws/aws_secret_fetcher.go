@@ -24,23 +24,6 @@ func NewManifestSecretFetcher(provider *AWSSecretsManagerProvider, manifest *Sec
 }
 
 func (msf *ManifestSecretsFetcher) Fetch() ([]*secrets.Secret, error) {
-	// region := a.awsCfg.Region
-	// // the manifest will take precidence over the region in the main config
-	// if msf.manifest.Region != "" {
-	// 	region = msf.manifest.Region
-	// }
-
-	//TODO: refactor:
-	// provider, err := NewAWSSecretsManagerProvider(region, msf.zl)
-	// if err != nil {
-	// 	msf.zl.Fatal("failed to setup aws secrets provider", zap.Error(err))
-	// }
-
-	// validate that the region on the provider is the same the region we're trying to query:
-	// if region != msf.provider.Region() {
-	// 	return nil, fmt.Errorf("aws provider region(%s) and manifest region(%s) do not  match", msf.provider.Region(), region)
-	// }
-
 	secretRes, err := msf.provider.FetchSecrets(msf.manifest.SecretObjects)
 	if err != nil {
 		msf.zl.Error("failed to fetch secrets from aws secrets provider",
@@ -53,7 +36,6 @@ func (msf *ManifestSecretsFetcher) Fetch() ([]*secrets.Secret, error) {
 	return secretRes, nil
 }
 
-//----------------------------------------------------------------
 type ListSecretFetcher struct {
 	// implements secrets.SecretsFetcher
 	zl           *zap.Logger
@@ -76,7 +58,6 @@ func NewListSecretFetcher(
 }
 
 func (lsf *ListSecretFetcher) Fetch() ([]*secrets.Secret, error) {
-	//TODO: Would we want allow a tag filter search only ?
 	if lsf.prefixFilter == "" {
 		lsf.zl.Error("prefix filter not set")
 		return nil, fmt.Errorf("prefix filter cannot be empty ")
