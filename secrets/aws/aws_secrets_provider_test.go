@@ -16,9 +16,6 @@ import (
 )
 
 // Ref: https://aws.github.io/aws-sdk-go-v2/docs/unit-testing/
-
-// Define a mock struct to be used in your unit tests of myFunc.
-
 type MockAwsSecret struct {
 	value string
 	tags  map[string]string
@@ -72,7 +69,10 @@ func doesMatchFilters(secretName string, secret *MockAwsSecret, filters []types.
 			if !bFoundValue {
 				return false, nil
 			}
+		default:
+			return false, fmt.Errorf("unsupported filter.Key=%v ", filter.Key)
 		}
+
 	}
 
 	return true, nil
@@ -133,175 +133,6 @@ func CreateProvider(t GinkgoTInterface, secretData map[string]*MockAwsSecret) *A
 	return provider
 }
 
-// var _ = Describe(`Fetch secret value test`, func() {
-// 	var (
-// 		provider *AWSSecretsManagerProvider
-
-// 		mockDataStore map[string]*MockAwsSecret = map[string]*MockAwsSecret{
-// 			"secret1":          {value: "value1"},
-// 			"secre2":           {value: "value2"},
-// 			"some/secret/name": {value: "{\r\n\t\"user\": \"user-1\",\r\n\t\"password\": \"password-1\",\r\n\t\"host\": \"database.example.com\"\r\n}"},
-// 		}
-// 	)
-// 	cases := []struct {
-// 		secreObejectName  string
-// 		expectSecretValue string
-// 		expectError       bool
-// 	}{
-// 		{
-// 			secreObejectName:  "secret1",
-// 			expectSecretValue: "value1",
-// 			expectError:       false,
-// 		},
-
-// 		{
-// 			secreObejectName:  "secre2",
-// 			expectSecretValue: "value2",
-// 			expectError:       false,
-// 		},
-
-// 		{
-// 			secreObejectName:  "some/secret/name",
-// 			expectSecretValue: "{\r\n\t\"user\": \"user-1\",\r\n\t\"password\": \"password-1\",\r\n\t\"host\": \"database.example.com\"\r\n}",
-// 			expectError:       false,
-// 		},
-// 		{
-// 			secreObejectName: "missingkey",
-// 			expectError:      true,
-// 		},
-// 	}
-
-// 	BeforeEach(func() {
-// 		// Load the whole folder:
-// 		provider = CreateProvider(GinkgoT(), mockDataStore)
-// 	})
-
-// 	// Test the static user repo (singlton implementation)
-// 	var TestGetSingleSecretValue = func() {
-// 		Context("Test get a single value", func() {
-// 			for _, testCase := range cases {
-// 				It(`It sould get valid secret"`, func() {
-// 					s, err := provider.getSecretValue(
-// 						&AwsSecretObject{
-// 							ObjectName: testCase.secreObejectName,
-// 						},
-// 					)
-
-// 					if testCase.expectError {
-// 						Expect(err).To(HaveOccurred())
-// 						Expect(s, BeNil())
-// 					} else {
-// 						Expect(err).NotTo(HaveOccurred())
-// 						Expect(s, Not(BeNil()))
-// 						Expect(s.Name, BeEquivalentTo(testCase.secreObejectName))
-// 						Expect(s.Content, BeEquivalentTo(testCase.expectSecretValue))
-// 					}
-
-// 				})
-// 			}
-
-// 		})
-// 	}
-
-// 	//TestGetSingleSecretValue()
-// })
-
-// var _ = Describe(`list secrets test`, func() {
-// 	var (
-// 		provider *AWSSecretsManagerProvider
-
-// 		mockDataStore map[string]*MockAwsSecret = map[string]*MockAwsSecret{
-// 			"secret1":                 {value: "value1", arn: "arn1"},
-// 			"myprefix":                {value: "value2", arn: "arn2"},
-// 			"myprefixABC":             {value: "value3", arn: "arn3"},
-// 			"myprefix/with_slash/a/b": {value: "value4", arn: "arn4"},
-// 		}
-// 	)
-
-// 	cases := []struct {
-// 		prefix       string
-// 		filters      map[string]string
-// 		expectError  bool
-// 		expectedArns []string
-// 	}{
-// 		{
-// 			// no prefix
-// 			// no filteres
-// 			expectError: true,
-// 		},
-// 		{
-// 			// no prefix
-// 			filters:     map[string]string{"filter_key": "filter_value"},
-// 			expectError: true,
-// 		},
-// 		{
-// 			prefix: "secret1", //exact match
-// 			// no filteres
-// 			expectError:  false,
-// 			expectedArns: []string{"arn1"},
-// 		},
-// 		{
-// 			prefix: "myprefix",
-// 			// no filteres
-// 			expectError:  false,
-// 			expectedArns: []string{"arn2", "arn3", "arn4"},
-// 		},
-
-// 		{
-// 			prefix: "myprefix/with_slash/",
-// 			// no filteres
-// 			expectError:  false,
-// 			expectedArns: []string{"arn4"},
-// 		},
-// 	}
-// 	fmt.Printf("cases: %v", cases)
-
-// 	BeforeEach(func() {
-// 		// Load the whole folder:
-// 		provider = CreateProvider(GinkgoT(), mockDataStore)
-// 	})
-
-// 	// Test the static user repo (singlton implementation)
-// 	var TestListSecrets = func() {
-// 		Context("Listing secrets", func() {
-// 			for i, testCase := range cases {
-// 				It(`It sould list secrets"`, func(i int, tc struct {
-// 					prefix       string
-// 					filters      map[string]string
-// 					expectError  bool
-// 					expectedArns []string
-// 				}) {
-
-// 					fmt.Printf("testCase: %v\n", testCase)
-
-// 					sos, err := provider.listSecrets(
-// 						testCase.prefix,
-// 						testCase.filters,
-// 					)
-
-// 					if testCase.expectError {
-// 						fmt.Printf("Case %d Expecting error\n", i)
-// 						Expect(err).To(HaveOccurred())
-// 						Expect(sos, BeNil())
-// 					} else {
-// 						fmt.Printf("Case %d NOT expecting error\n", i)
-// 						Expect(err).NotTo(HaveOccurred())
-// 						Expect(sos, Not(BeNil()))
-
-// 						// 	Expect(len(sos), BeEquivalentTo(len(testCase.expectedArns)))
-
-// 						// 	//TODO: sort and compare array content
-// 					}
-
-// 				})
-// 			}
-
-// 		})
-// 	}
-
-// 	TestListSecrets()
-// })
-
 var _ = Describe("Listing secrets", func() {
 	var (
 		provider      *AWSSecretsManagerProvider
@@ -334,7 +165,6 @@ var _ = Describe("Listing secrets", func() {
 				Expect(sos).To(BeNil())
 			} else {
 				Expect(err).NotTo(HaveOccurred())
-				//Expect(sos).NotTo(BeNil())
 
 				fmt.Printf("expected_len=%d\n", len(expectedArns))
 				fmt.Printf("sos_len=%d\n", len(sos))
@@ -353,5 +183,48 @@ var _ = Describe("Listing secrets", func() {
 		Entry("matching prefix, with filter match both key and value", "matching_prefix", map[string]string{"sometagname": "sometagValue"}, false, []string{"arn5"}),
 
 		Entry("matching prefix, with filter matching key, but not value", "matching_prefix", map[string]string{"sometagname": "sometagValueMISSING"}, false, nil),
+	)
+})
+
+var _ = Describe(`Fetch secret value test`, func() {
+	var (
+		provider *AWSSecretsManagerProvider
+
+		mockDataStore map[string]*MockAwsSecret = map[string]*MockAwsSecret{
+			"secret1":          {value: "value1"},
+			"secre2":           {value: "value2"},
+			"some/secret/name": {value: "{\r\n\t\"user\": \"user-1\",\r\n\t\"password\": \"password-1\",\r\n\t\"host\": \"database.example.com\"\r\n}"},
+		}
+	)
+
+	BeforeEach(func() {
+		// Load the whole folder:
+		provider = CreateProvider(GinkgoT(), mockDataStore)
+	})
+	DescribeTable("get a single secret value",
+		func(secreObejectName string,
+			expectSecretValue string,
+			expectError bool) {
+			s, err := provider.getSecretValue(
+				&AwsSecretObject{
+					ObjectName: secreObejectName,
+				},
+			)
+
+			if expectError {
+				Expect(err).To(HaveOccurred())
+				Expect(s).To(BeNil())
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(s).NotTo(BeNil())
+				Expect(s.Name).To(BeEquivalentTo(secreObejectName))
+				Expect(s.Content).To(BeEquivalentTo(expectSecretValue))
+			}
+
+		},
+		Entry("Simple get 1", "secret1", "value1", false),
+		Entry("Simple get 2", "secre2", "value2", false),
+		Entry("Get complex json value", "some/secret/name", "{\r\n\t\"user\": \"user-1\",\r\n\t\"password\": \"password-1\",\r\n\t\"host\": \"database.example.com\"\r\n}", false),
+		Entry("Get missing key", "missingkey", "", true),
 	)
 })
