@@ -10,14 +10,10 @@ Usage:
 Flags:
 * -h, --help                  help for aws
 * -m, --manifest {manifest_filepath}       secrets manifest file
-*  -o, --output {folder_path}         output folder (writes multiple json files to this folder)
-* --tags {filtermap}   a map (key, value) of filters to find secerts by. Example:   
-      --tags="app=comma,value",secret-type=no-comma,tagKey=tagValue (defaults to no filters)
-
-Global Flags:
-* --config {filepath}     config file (default is ./config.yaml) (default "config.yaml")
-* --loglevel {log_level}   log level (default is info) (default "info")
-
+* -o, --output {folder_path}         output folder (writes multiple json files to this folder)
+* --prefix string           a prefix for all secrets to fetch
+* --tagkeys stringArray     an array of tag key prefixes of filters to find secerts by. Example: --tagkeys=app,secret-type
+* --tagvalues stringArray   an array of tag value prefixes of filters to find secerts by. Example: --tagvalues=my-app-name,b44c6886-96c4-4b4d-b267-30d7c5787b1a
 
 
 ## Configuration
@@ -28,52 +24,34 @@ We allow configuration in 3 ways leveraging viper (in priority order)
 3. commandline arguments (where available)
 
 
-Sample configuration file:
-
-```yaml
-LogLevel: info
-
-Aws:
-  prefixFilter: "mysecretprefix/"
-  tagFilter:
-      # Note: to be able to override values from ENV vars, you have to supply them in the config.yaml first  (ref: https://github.com/spf13/viper/issues/708)
-      # it needs to be the same exact keys your overrideing in ENV vars (no less and more more keys)
-      app: "my-sample-app"
-      secret-type: "my-sample-type"
-  Region: ""
-  PathTranslation: "_"
-```
-
 
 Sample environment variable override values:
 
 ```
 "APP_LOGLEVEL": "debug",
-"APP_AWS_PREFIXFILTER": "api-verifier-users/",
+"APP_AWS_PREFIXFILTER": "my-app/user-secrest/",
 "APP_AWS_PATHTRANSLATION": "@",
 "APP_AWS_REGION": "ap-southeast-2"
+
+"APP_AWS_TAGKEYFILTERS": "app,user-type",
+"APP_AWS_TAGVALUEFILTERS": "my-app,some-id",
 ```
 
-Limitations: 
-1. Becase the field "TagFilter" is a map (to allow flexiblity in filtering), it can only overriden by an environment variable if it is provided in the config file (This is due to a viper limitation). For example, if you would like to filter by tag named "tag-name", you need to setup the following config :
+Sample configuration file:
 
-    ```yaml
-    LogLevel: info
-    Aws:
-    prefixFilter: "mysecretprefix/"
-    tagFilter:
-        # Note: to be able to override values from ENV vars, you have to supply them in the config.yaml first  (ref: https://github.com/spf13/viper/issues/708)
-        # it needs to be the same exact keys your overrideing in ENV vars (no less and more more keys)
-        tag-name: "tag_value"
-    Region: ""
-    PathTranslation: "_"
-    ```
-    and then you'd be able to override the filter value by setting the env var:
+  ```yaml
+LogLevel: info
 
-    ```
-    APP_AWS_TAGFILTER_TAG-NAME="actual-value-to-filter-by"
-    ```
-
+Aws:
+  prefixFilter: "mysecretprefix/"
+  tagKeyFilters:
+    - tag_name_prefix1
+    - tag_name_prefix2
+  tagValueFilters:
+    - tag_value_prefix1
+  Region: ""
+  PathTranslation: "_"
+  
 
 ## Operation modes
 
@@ -86,7 +64,7 @@ The aws secrets fetcher command can operate in 2 modes:
     "Action": "secretsmanager:GetSecretValue",
     ```
 
-2. Listing and fetching all secrets using a prefix + tag filters.  
+2. Listing and fetching all secrets using a prefix + tag (key/value) filters.  
     Make sure your secrets are labeled properly and that the IAM role policy allows:
 
     ```json
@@ -179,9 +157,7 @@ spec:
 
 You can configure for following search parameters (supported through cli flags, configuration and ENV vars):
 1. prefixFilter - Will list all secrets with that name prefix (this is a wildcard search).
-2. tagFilter- a map of key value pairs matching secret labels (these will be exact match searches). For example:
+2. tagKeyFilters- A list of (prefix) AWS tag key name to filter for (a match must include tags with all prefixes)
+3. tagValueFilters - A list of (prefix) AWS tag values to filter for (a match must include tags with all prefixes)
 
-    ```yaml
-    app: "my-sample-app"
-    secret-type: "my-sample-type"
-    ```
+

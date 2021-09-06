@@ -82,7 +82,7 @@ var awsCmd = &cobra.Command{
 		if manifestCfg != nil {
 			sf = aws.NewManifestSecretFetcher(provider, manifestCfg, zl)
 		} else {
-			sf = aws.NewListSecretFetcher(provider, cfg.Aws.PrefixFilter, cfg.Aws.TagFilter, zl)
+			sf = aws.NewListSecretFetcher(provider, cfg.Aws.PrefixFilter, cfg.Aws.TagKeyFilters, cfg.Aws.TagValueFilters, zl)
 		}
 
 		secretRes, err := sf.Fetch()
@@ -102,10 +102,11 @@ var awsCmd = &cobra.Command{
 
 func init() {
 	awsCmd.Flags().StringP("manifest", "m", "", "secrets manifest file")
-	//awsCmd.Flags().StringVarP(&manifestFile, "manifest", "m", "", "secrets manifest file")
-	//awsCmd.Flags().StringVarP(&outputFolder, "output", "o", "", "output folder. Will default to the current working folder")
 	awsCmd.Flags().StringP("output", "o", "", "output folder. Will default to the current working folder")
-	awsCmd.Flags().StringToString("tags", map[string]string{}, "a map (key, value) of filters to find secerts by. Example: --tags=\"app=comma,value\",secret-type=no-comma,tagKey=tagValue")
+
+	awsCmd.Flags().StringSlice("tagkeys", []string{}, "an array of tag key prefixes of filters to find secerts by. Example: --tagkeys=app,secret-type")
+	awsCmd.Flags().StringSlice("tagvalues", []string{}, "an array of tag value prefixes of filters to find secerts by. Example: --tagvalues=my-app-name,b44c6886-96c4-4b4d-b267-30d7c5787b1a")
+
 	awsCmd.Flags().String("prefix", "", "a prefix for all secrets to fetch")
 
 	rootCmd.AddCommand(awsCmd)

@@ -155,8 +155,8 @@ func (p *AWSSecretsManagerProvider) FetchSecrets(secretObjs []*AwsSecretObject) 
 	return res, nil
 }
 
-func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*secrets.Secret, error) {
-	secretObjects, err := p.listSecrets(secretNamePrefix, tagFilters)
+func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tagKeyFilters []string, tagValueFilters []string) ([]*secrets.Secret, error) {
+	secretObjects, err := p.listSecrets(secretNamePrefix, tagKeyFilters, tagValueFilters)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (p *AWSSecretsManagerProvider) FetchAllSecrets(secretNamePrefix string, tag
 // We will fetch a list of ARNS and construct AwsSecretObject with the latest versions:
 // We can set a range of tag filters . E.g. app=api-verifier
 // SecretNamePrefix - is mandatory. E.:g secretNamePrefix= api-verifier/
-func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilters map[string]string) ([]*AwsSecretObject, error) {
+func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagKeyFilters []string, tagValueFilters []string) ([]*AwsSecretObject, error) {
 	if strings.TrimSpace(secretNamePrefix) == "" {
 		return nil, fmt.Errorf("secretNamePrefix cannot be empty")
 	}
@@ -182,9 +182,14 @@ func (p *AWSSecretsManagerProvider) listSecrets(secretNamePrefix string, tagFilt
 
 	filters := []types.Filter{{Key: types.FilterNameStringTypeName, Values: []string{secretNamePrefix}}}
 
-	for k, v := range tagFilters {
+	for _, v := range tagKeyFilters {
 		filters = append(filters,
-			types.Filter{Key: types.FilterNameStringTypeTagKey, Values: []string{k}},
+			types.Filter{Key: types.FilterNameStringTypeTagKey, Values: []string{v}},
+		)
+	}
+
+	for _, v := range tagValueFilters {
+		filters = append(filters,
 			types.Filter{Key: types.FilterNameStringTypeTagValue, Values: []string{v}},
 		)
 	}

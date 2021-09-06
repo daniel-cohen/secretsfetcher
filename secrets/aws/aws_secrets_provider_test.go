@@ -151,13 +151,15 @@ var _ = Describe("Listing secrets", func() {
 	})
 	DescribeTable("Listing secret filters",
 		func(prefix string,
-			filters map[string]string,
+			keyFilters []string,
+			valueFilters []string,
 			expectError bool,
 			expectedArns []string) {
 
 			sos, err := provider.listSecrets(
 				prefix,
-				filters,
+				keyFilters,
+				valueFilters,
 			)
 
 			if expectError {
@@ -174,15 +176,15 @@ var _ = Describe("Listing secrets", func() {
 				// 	//TODO: sort and compare array content
 			}
 		},
-		Entry("empty prefix, no filters", "", nil, true, nil),
-		Entry("empty prefix, with filters", "", map[string]string{"filter_key": "filter_value"}, true, nil),
-		Entry("exact name match, no filters", "secret1", nil, false, []string{"arn1"}),
-		Entry("prefix matching 3 entries, no iflters", "myprefix", nil, false, []string{"arn2", "arn3", "arn4"}),
-		Entry("prefix with a slash, no filters", "myprefix/with_slash/", nil, false, []string{"arn4"}),
+		Entry("empty prefix, no filters", "", nil, nil, true, nil),
+		Entry("empty prefix, with filters", "", []string{"filter_key"}, []string{"filter_value"}, true, nil),
+		Entry("exact name match, no filters", "secret1", nil, nil, false, []string{"arn1"}),
+		Entry("prefix matching 3 entries, no iflters", "myprefix", nil, nil, false, []string{"arn2", "arn3", "arn4"}),
+		Entry("prefix with a slash, no filters", "myprefix/with_slash/", nil, nil, false, []string{"arn4"}),
 
-		Entry("matching prefix, with filter match both key and value", "matching_prefix", map[string]string{"sometagname": "sometagValue"}, false, []string{"arn5"}),
+		Entry("matching prefix, with filter match both key and value", "matching_prefix", []string{"sometagname"}, []string{"sometagValue"}, false, []string{"arn5"}),
 
-		Entry("matching prefix, with filter matching key, but not value", "matching_prefix", map[string]string{"sometagname": "sometagValueMISSING"}, false, nil),
+		Entry("matching prefix, with filter matching key, but not value", "matching_prefix", []string{"sometagname"}, []string{"sometagValueMISSING"}, false, nil),
 	)
 })
 

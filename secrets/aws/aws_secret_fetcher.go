@@ -38,22 +38,25 @@ func (msf *ManifestSecretsFetcher) Fetch() ([]*secrets.Secret, error) {
 
 type ListSecretFetcher struct {
 	// implements secrets.SecretsFetcher
-	zl           *zap.Logger
-	provider     *AWSSecretsManagerProvider
-	prefixFilter string
-	tagFilter    map[string]string
+	zl              *zap.Logger
+	provider        *AWSSecretsManagerProvider
+	prefixFilter    string
+	tagKeyFilters   []string
+	tagValueFilters []string
 }
 
 func NewListSecretFetcher(
 	provider *AWSSecretsManagerProvider,
 	prefixFilter string,
-	tagFilter map[string]string,
+	tagKeyFilters []string,
+	tagValueFilters []string,
 	zl *zap.Logger) *ListSecretFetcher {
 	return &ListSecretFetcher{
-		zl:           zl,
-		provider:     provider,
-		prefixFilter: prefixFilter,
-		tagFilter:    tagFilter,
+		zl:              zl,
+		provider:        provider,
+		prefixFilter:    prefixFilter,
+		tagKeyFilters:   tagKeyFilters,
+		tagValueFilters: tagValueFilters,
 	}
 }
 
@@ -63,12 +66,13 @@ func (lsf *ListSecretFetcher) Fetch() ([]*secrets.Secret, error) {
 		return nil, fmt.Errorf("prefix filter cannot be empty ")
 	}
 
-	secretRes, err := lsf.provider.FetchAllSecrets(lsf.prefixFilter, lsf.tagFilter)
+	secretRes, err := lsf.provider.FetchAllSecrets(lsf.prefixFilter, lsf.tagKeyFilters, lsf.tagValueFilters)
 
 	if err != nil {
 		lsf.zl.Error("failed to fetch all secrets from aws secrets provider",
 			zap.String("prefixFilter", lsf.prefixFilter),
-			zap.Any("tagFilter", lsf.tagFilter),
+			zap.Strings("tagKeyFilters", lsf.tagKeyFilters),
+			zap.Strings("tagValueFilters", lsf.tagValueFilters),
 			zap.Error(err))
 		return nil, err
 	}

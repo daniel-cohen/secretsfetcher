@@ -2,10 +2,10 @@ LogLevel: info
 
 Aws:
   prefixFilter: "mysecretprefix/"
-  tagFilter:
-      # Note: to be able to override values from ENV vars, you have to supply them in the config.yaml first  (ref: https://github.com/spf13/viper/issues/708)
-      # it needs to be the same exact keys your overrideing in ENV vars (no less and more more keys)
-      app: "my-sample-app"
-      secret-type: "my-sample-type"
+  tagKeyFilters:
+    - tag_name_prefix1
+    - tag_name_prefix2
+  tagValueFilters:
+    - tag_value_prefix1
   Region: ""
   PathTranslation: "_"

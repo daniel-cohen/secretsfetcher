@@ -72,10 +72,14 @@ func initConfig() {
 	viper.BindPFlag("loglevel", rootCmd.Flags().Lookup("loglevel"))
 
 	///-----------------------------------------------------------------
-	//viper.BindPFlag("loglevel", awsCmd.Flags().Lookup("tags"))
+
 	//TODO: See if I can refactor this into the aws.go command:
-	if awsCmd.Flags().Lookup("tags") != nil {
-		viper.BindPFlag("Aws.TagFilter", awsCmd.Flags().Lookup("tags"))
+	if awsCmd.Flags().Lookup("tagkeys") != nil {
+		viper.BindPFlag("Aws.TagKeyFilters", awsCmd.Flags().Lookup("tagkeys"))
+	}
+
+	if awsCmd.Flags().Lookup("tagvalues") != nil {
+		viper.BindPFlag("Aws.TagValueFilters", awsCmd.Flags().Lookup("tagvalues"))
 	}
 
 	if awsCmd.Flags().Lookup("prefix") != nil {
@@ -86,6 +90,8 @@ func initConfig() {
 
 	// Set specific (even if empty) defaults so we can load them from ENV even if the config is not loaded:
 	viper.SetDefault("Aws.PrefixFilter", "")
+	viper.SetDefault("Aws.TagKeyFilters", []string{})
+	viper.SetDefault("Aws.TagValueFilters", []string{})
 	viper.SetDefault("Aws.PathTranslation", aws.DefaultPathTranslation)
 	viper.SetDefault("Aws.Region", "")
 	viper.SetDefault("Aws.TagFilter", map[string]string{})
