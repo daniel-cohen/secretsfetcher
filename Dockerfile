@@ -1,7 +1,7 @@
 FROM golang:1.15.7-alpine3.13 as builder
 #FROM golang:1.15-buster as builder
 
-LABEL maintainer=daniel.cohen@nearmap.com
+LABEL maintainer=daniel-cohen@users.noreply.github.com
 
 ARG VERSION=unset
 
