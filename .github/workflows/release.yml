@@ -15,7 +15,7 @@ jobs:
       - name: Golang setup
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15
+          go-version: 1.15.10
         id: go
 
       - name: Check out code into the Go module directory
@@ -38,12 +38,12 @@ jobs:
     runs-on: ubuntu-18.04
     needs: build_and_test
     env:
-      SERVICE: segrules
+      SERVICE: secretsfetcher
     steps:
-      - name: Set up Go 1.15.7
+      - name: Golang setup
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.7
+          go-version: 1.15.10
         id: go
 
       - name: Check out code into the Go module directory
@@ -63,8 +63,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_PAT }}
+          username: ${{secrets.DOCKERHUB_USER}}
+          password: ${{secrets.DOCKERHUB_PAT}}
 
       - name: Build & Release
         run: |
