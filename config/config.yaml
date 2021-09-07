@@ -1,0 +1,11 @@
+LogLevel: info
+
+Aws:
+  prefixFilter: "mysecretprefix/"
+  tagKeyFilters:
+    - tag_name_prefix1
+    - tag_name_prefix2
+  tagValueFilters:
+    - tag_value_prefix1
+  Region: ""
+  PathTranslation: "_"
