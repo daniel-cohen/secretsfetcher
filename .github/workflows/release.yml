@@ -71,7 +71,7 @@ jobs:
           VERSION="v$(date -u "+%y%m%d-%H%M%S")-${GITHUB_SHA::7}"
           IMAGE_NAME="danielco/$SERVICE"
           IMAGE_NAME_VERSION="$IMAGE_NAME:$VERSION"
-          IMAGE_NAME_LATEST="IMAGE_NAME:latest"
+          IMAGE_NAME_LATEST="$IMAGE_NAME:latest"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
           # build the normal image
