@@ -76,7 +76,7 @@ jobs:
 
           # build the normal image
           docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME_VERSION -t $IMAGE_NAME_LATEST .
-          docker push $IMAGE_NAME
+          docker push $IMAGE_NAME --all-tags
       - name: Tag Release
         run: |
           REMOTE="https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
