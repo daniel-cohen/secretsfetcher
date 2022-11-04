@@ -47,11 +47,7 @@ jobs:
           # exports VERSION env var to next step
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-
           # build the docker image:
-          #docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME .
-          #docker push $IMAGE_NAME
-
           docker buildx create \
             --name multi \
             --driver docker-container \

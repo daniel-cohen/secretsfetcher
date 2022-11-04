@@ -23,7 +23,7 @@ var (
 //
 var rootCmd = &cobra.Command{
 	Use:   "secretsfetcher",
-	Short: "A service capable to perform segment related operations",
+	Short: "A tool to fetch aws secrets to local json files.",
 	Run: func(cmd *cobra.Command, args []string) {
 
 	},
