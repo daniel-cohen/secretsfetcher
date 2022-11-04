@@ -49,8 +49,20 @@ jobs:
 
 
           # build the docker image:
-          docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
+          #docker build --build-arg VERSION=$VERSION -t $IMAGE_NAME .
+          #docker push $IMAGE_NAME
+
+          docker buildx create \
+            --name multi \
+            --driver docker-container \
+            --bootstrap
+          docker buildx build \
+            --builder multi \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg "VERSION=$VERSION" \
+            --tag $IMAGE_NAME \
+            --push .
+
       - name: Tag Release
         run: |
           REMOTE="https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
